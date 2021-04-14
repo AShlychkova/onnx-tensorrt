@@ -1160,7 +1160,7 @@ DEFINE_BUILTIN_OP_IMPORTER(EyeLike)
     auto* layer = ctx->network()->addConstant(dims, tempWeights);
     layer->setOutputType(0, nvinfer1::DataType::kINT32);
     ctx->registerLayer(layer, node.name());
-    
+
     if (dtype != nvinfer1::DataType::kINT32) {
         return {{castHelper(ctx, layer->getOutput(0), dtype)}};
     }
@@ -3581,6 +3581,23 @@ DEFINE_BUILTIN_OP_IMPORTER(Sin)
 DEFINE_BUILTIN_OP_IMPORTER(Sinh)
 {
     return unaryHelper(ctx, node, inputs.at(0), nvinfer1::UnaryOperation::kSINH);
+}
+
+DEFINE_BUILTIN_OP_IMPORTER(Silu)
+{
+    nvinfer1::ITensor* tensor_prt = &convertToTensor(inputs.at(0), ctx);
+    OnnxAttrs attrs(node, ctx);
+
+    const std::string pluginName = "SiLUPlagin_TRT";
+    const std::string pluginVersion = "1";
+
+    std::vector<nvinfer1::PluginField> f;
+    nvinfer1::IPluginV2* plugon = importPluginFromRegistry(ctx, pluginName, pluginVersion, node.name(), f);
+
+    ASSERT(plugin != nullptr && "SiLU was not found", ErrorCode::kUNSUPPORTED_NODE);
+
+
+    return RETURN_FIRST_OUTPUT(ctx->network()->addPluginV2(&tensor_prt, 1, *plugin));
 }
 
 DEFINE_BUILTIN_OP_IMPORTER(Size)
